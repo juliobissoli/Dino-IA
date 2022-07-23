@@ -513,32 +513,37 @@ def crossover(firstState, secondState, rangeChildrens):
         childrens.append(mutation(newState, 0.1))
     return childrens
 
-
-def begin(max_time):
-    global aiPlayer
+# best_state, best_value = playToIA(first_states, max_time, manyPlays, start, generation,) # rodar por 24 horas
+def playToIA(states, max_time, manyPlays, start, generation):
+    # global aiPlayer
     # f = open("log.txt", "w")
     # f.write("")
     # f.close()
-    manyPlays = 4
-    start = time.process_time()
     # res = 0
-    states = []
+    # states = []
     # better = True
-    end = 0
-    generation = 1
-    
-    print('Begin')
-    for i in range(3):
-        newState = [random.randint(-100, 100) for _ in range(189)]
-        aiPlayer = KeyNeuralClassifier(newState)
-        res, value = manyPlaysResults(manyPlays)
-        #print(newState, generation, it+1, value)
-        print(generation, i+1, value)
-        states.append([value, newState])
 
-    states.sort()
-    states.reverse()
-    saveStates(states, generation, time.process_time() - start)
+    # start = time.process_time()
+    end = 0
+    # manyPlays = 4
+    # generation = 1
+    
+    # print('playToIA')
+    # for i in range(3):
+    #     newState = [random.randint(-100, 100) for _ in range(189)]
+    #     aiPlayer = KeyNeuralClassifier(newState)
+    #     res, value = manyPlaysResults(manyPlays)
+    #     #print(newState, generation, it+1, value)
+    #     print(generation, i+1, value)
+    #     states.append([value, newState])
+
+    # states.sort()
+    # states.reverse()
+    # saveStates(states, generation, time.process_time() - start)
+
+    # Dscomenta aqui ============
+    states, aiPlayer = generateFistrState(generation, manyPlays, start)
+
     print('Agora ele vai jogar')
     generation+=1
     while end - start <= max_time:
@@ -566,6 +571,24 @@ def begin(max_time):
     best_value = states[0][0]
     print(best_state)
     return best_state, best_value
+
+def generateFistrState(generation, qtdPlayers, start):
+    global aiPlayer
+    print('playToIA')
+    states = []
+    for i in range(30):
+        newState = [random.randint(-100, 100) for _ in range(189)]
+        aiPlayer = KeyNeuralClassifier(newState)
+        res, value = manyPlaysResults(qtdPlayers)
+        #print(newState, generation, it+1, value)
+        print(generation, i+1, value)
+        states.append([value, newState])
+
+    states.sort()
+    states.reverse()
+    saveStates(states, generation, time.process_time() - start)
+
+    return [states, aiPlayer]
 
 
 # Gradiente Ascent
@@ -623,8 +646,15 @@ def manyPlaysResults(rounds):
 #     print(res, npRes.mean(), npRes.std(), value)
 
 def main():
-    global aiPlayer
-    best_state, best_value = begin(24*60*60) # rodar por 24 horas
+    # global aiPlayer
+    manyPlays = 3   
+    start = time.process_time()
+    states = []
+    end = 0
+    generation = 1
+    max_time =  24*60*60
+    first_states, aiPlayer = generateFistrState(generation, manyPlays, start)
+    best_state, best_value = playToIA(first_states, max_time, manyPlays, start, generation) # rodar por 24 horas
     aiPlayer = KeyNeuralClassifier(best_state)
     res, value = manyPlaysResults(30)
     npRes = np.asarray(res)
