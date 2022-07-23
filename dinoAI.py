@@ -267,7 +267,7 @@ class KeyNeuralClassifier(KeyClassifier):
         op3, pos = self.neuronsConnections(op2, 7, 7, pos)
         op4, pos = self.neuronsConnections(op3, 7, 7, pos)
         lastOp, pos = self.neuronsConnections(op4, 7, 1, pos)# qtdWeight = 5*7+3*7*7+7 = 189
-        print(lastOp[0])
+        # print(lastOp[0])
         # if lastOp[0] > 0.9:
         if lastOp[len(lastOp) -1 ] > 0:
             return "K_UP"
@@ -275,9 +275,11 @@ class KeyNeuralClassifier(KeyClassifier):
         #return "K_NO"
 
     def neuronsConnections(self, value, input, output, position):
-        print('val=> ', value, '\tinput=> ', input, '\toutput', output, '\tposition', position)
+        # print('val=> ', value, '\tinput=> ', input, '\toutput', output, '\tposition', position)
         neurons = []
-        for i in range(output):
+        i = 0
+        for _ in range(output):
+            i += 1
             count = 0
             for j in range(input):
                 count += value[j] * self.weight[position]
@@ -408,7 +410,8 @@ def playGame():
 
 
 def changeState(state, position):
-    aux = state.copy()
+    print('change state => ', state, position)
+    copyState = state.copy()
     s = state[position]
     vs = random.randint(-20,20)
     ns = s + vs
@@ -416,7 +419,7 @@ def changeState(state, position):
         ns += 200
     if ns > 100:
         ns -= 200
-    newState = aux[:position] + [(ns)] + aux[position + 1:]
+    newState = copyState[:position] + [(ns)] + copyState[position + 1:]
     return mutation(newState, 0.1)
 
 # Neighborhood
@@ -453,16 +456,16 @@ def changeState(state, position):
 
 
 def generateKNeighborhoods(state, x):
-    neighborhood = []
-    state_size = len(state)
+    neighborhoodList = []
+    # stateLen = len(state)
     for _ in range(x):
-        posToGet = random.randint(0,state_size-1)
+        posToGet = random.randint(0,len(state) - 1)
         state_to_change = state
         new_states = [changeState(state_to_change, posToGet)]
         for s in new_states:
             if s != []:
-                neighborhood.append(s)
-    return neighborhood
+                neighborhoodList.append(s)
+    return neighborhoodList
 
 def generate_states(states, neighborhoodQtd, bestStatesQtd, crossoverQtd):
     bests = states[0 : bestStatesQtd]
@@ -502,11 +505,11 @@ def mutation(state, mutatationRate):
         
 # Crossover
 
-def crossover(state1, state2, childrensQtd):
+def crossover(firstState, secondState, rangeChildrens):
     childrens = []
-    for it in range(childrensQtd):
-        randPos = random.randint(0, len(state1))
-        newState = state1[:randPos] + state2[randPos:]
+    for _ in range(rangeChildrens):
+        randPos = random.randint(0, len(firstState))
+        newState = firstState[:randPos] + secondState[randPos:]
         childrens.append(mutation(newState, 0.1))
     return childrens
 
@@ -516,26 +519,27 @@ def begin(max_time):
     # f = open("log.txt", "w")
     # f.write("")
     # f.close()
-    plays = 3
+    manyPlays = 4
     start = time.process_time()
-    res = 0
+    # res = 0
     states = []
-    better = True
+    # better = True
     end = 0
     generation = 1
     
-    for it in range(30):
+    print('Begin')
+    for i in range(3):
         newState = [random.randint(-100, 100) for _ in range(189)]
         aiPlayer = KeyNeuralClassifier(newState)
-        res, value = manyPlaysResults(plays)
+        res, value = manyPlaysResults(manyPlays)
         #print(newState, generation, it+1, value)
-        print(generation, it+1, value)
+        print(generation, i+1, value)
         states.append([value, newState])
 
     states.sort()
     states.reverse()
     saveStates(states, generation, time.process_time() - start)
-
+    print('Agora ele vai jogar')
     generation+=1
     while end - start <= max_time:
         it = 0
@@ -549,7 +553,7 @@ def begin(max_time):
             it+= 1
             aiPlayer = KeyNeuralClassifier(s)
             
-            res, value = manyPlaysResults(plays)
+            res, value = manyPlaysResults(manyPlays)
             #print(s, generation, it, value)
             print(generation, it, value)
             states.append([value, s])
