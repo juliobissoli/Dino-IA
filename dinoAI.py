@@ -240,22 +240,6 @@ class KeySimplestClassifier(KeyClassifier):
     def updateState(self, state):
         self.state = state
 
-# ==== my classifier ====
-
-def sigmoid(x):
-    # invert = (x >= 0 if -1 else 1)  # fator que multiplicado tora a função negativa ou n
-    # resExp = exp(x * invert)
-    # divisor = (1 / resExp)
-    # return  (x >= 0 if (1/divisor) else (resExp/divisor))
-    if x >= 0:
-        z = exp(-x)
-        sig = 1 / (1 + z)
-        return sig
-    else:
-        z = exp(x)
-        sig = z / (1 + z)
-        return sig
-
 
 class KeyNeuralClassifier(KeyClassifier):
     def __init__(self, weight):
@@ -264,11 +248,10 @@ class KeyNeuralClassifier(KeyClassifier):
     def getKey(self, obDistance, obHeight, scSpeed, obWidth, diHeight):
         op1, pos = self.neuronsConnections([obDistance, obWidth, obHeight, scSpeed, diHeight], 5, 7, 0)
         op2, pos = self.neuronsConnections(op1, 7, 7, pos)
-        op3, pos = self.neuronsConnections(op2, 7, 7, pos)
-        op4, pos = self.neuronsConnections(op3, 7, 7, pos)
-        lastOp, pos = self.neuronsConnections(op4, 7, 1, pos)# qtdWeight = 5*7+3*7*7+7 = 189
-        # print(lastOp[0])
-        # if lastOp[0] > 0.9:
+        # op3, pos = self.neuronsConnections(op2, 7, 7, pos)
+        op4, pos = self.neuronsConnections(op2, 7, 7, pos)
+        lastOp, pos = self.neuronsConnections(op4, 7, 1, pos)# Quantidade de pessos e dada por = 5*7+2*7*7+7 = 140
+
         if lastOp[len(lastOp) -1 ] > 0:
             return "K_UP"
         return "K_DOWN"
@@ -286,6 +269,7 @@ class KeyNeuralClassifier(KeyClassifier):
                 position += 1
             # neurons.append(sigmoid(count)) # tanh
             neurons.append(tanh(count)) # tanh
+        print(neurons)
         return [neurons, position]
    
     # def updateWeight(self, weight):
@@ -397,20 +381,8 @@ def playGame():
                 return points
 
 
-# Change State Operator
-
-# def change_state(state, position, vs, vd):
-#     aux = state.copy()
-#     s, d = state[position]
-#     ns = s + vs
-#     nd = d + vd
-#     if ns < 15 or nd > 1000:
-#         return []
-#     return aux[:position] + [(ns, nd)] + aux[position + 1:]
-
 
 def changeState(state, position):
-    print('change state => ', state, position)
     copyState = state.copy()
     s = state[position]
     vs = random.randint(-20,20)
@@ -421,38 +393,6 @@ def changeState(state, position):
         ns -= 200
     newState = copyState[:position] + [(ns)] + copyState[position + 1:]
     return mutation(newState, 0.1)
-
-# Neighborhood
-
-# def generate_neighborhood(state):
-#     neighborhood = []
-#     state_size = len(state)
-#     for i in range(state_size):
-#         listRandon = [random.randint(-5,5) for _ in range(4)]
-#         # ds = random.randint(1, 10) 
-#         # dd = random.randint(1, 100) 
-#         # new_states = [change_state(state, i, ds, 0), change_state(state, i, (-ds), 0), change_state(state, i, 0, dd),
-#         #               change_state(state, i, 0, (-dd))]
-
-#         new_state = [change_state(state, i, dRandon, 0) for dRandon in listRandon]
-#         for s in new_states:
-#             if s != []:
-#                 neighborhood.append(s)
-#     return neighborhood
-
-
-# def generate_neighborhood_Ric(state, p):
-#     neighborhood = []
-#     state_size = len(state)
-#     for j in range(1):
-#         for i in range(state_size):
-#             if random.randint(0,100) < 100*p:
-#                 state_to_change = state
-#                 new_states = [changeState(state_to_change, i)]
-#                 for s in new_states:
-#                     if s != []:
-#                         neighborhood.append(s)
-#     return neighborhood
 
 
 def generateKNeighborhoods(state, x):
@@ -467,7 +407,7 @@ def generateKNeighborhoods(state, x):
                 neighborhoodList.append(s)
     return neighborhoodList
 
-def generate_states(states, neighborhoodQtd, bestStatesQtd, crossoverQtd):
+def createStates(states, neighborhoodQtd, bestStatesQtd, crossoverQtd):
     bests = states[0 : bestStatesQtd]
     
     auxNeighborhood = []
@@ -485,25 +425,18 @@ def generate_states(states, neighborhoodQtd, bestStatesQtd, crossoverQtd):
     return auxNeighborhood + auxCrossover
 
 
-#  ===== Algoritmo genetico ===========
-# Mutation
-
 def mutation(state, mutatationRate):
     aux = state.copy()
     state_size = len(state)
-    for it in range(state_size):
+    for i in range(state_size):
         rand = random.randint(0, 100)
         if rand < mutatationRate*100:
-            aux[it] =  random.randint(-100, 100)
+            aux[i] +=  random.randint(-10, 10)
+            if aux[i] > 100:
+                aux[i] = 100
+            if aux[i] < -100:
+                aux[i] = -100
     return aux
-
-# def mutationAll(states, mutatationRate):
-#     aux = []
-#     states_qtd = len(states)
-#     for it in range(states_qtd):
-#         aux.append(mutation(states[it][1], mutatationRate))
-        
-# Crossover
 
 def crossover(firstState, secondState, rangeChildrens):
     childrens = []
@@ -515,43 +448,15 @@ def crossover(firstState, secondState, rangeChildrens):
 
 # best_state, best_value = playToIA(first_states, max_time, manyPlays, start, generation,) # rodar por 24 horas
 def playToIA(states, max_time, manyPlays, start, generation):
-    # global aiPlayer
-    # f = open("log.txt", "w")
-    # f.write("")
-    # f.close()
-    # res = 0
-    # states = []
-    # better = True
-
-    # start = time.process_time()
     end = 0
-    # manyPlays = 4
-    # generation = 1
-    
-    # print('playToIA')
-    # for i in range(3):
-    #     newState = [random.randint(-100, 100) for _ in range(189)]
-    #     aiPlayer = KeyNeuralClassifier(newState)
-    #     res, value = manyPlaysResults(manyPlays)
-    #     #print(newState, generation, it+1, value)
-    #     print(generation, i+1, value)
-    #     states.append([value, newState])
-
-    # states.sort()
-    # states.reverse()
-    # saveStates(states, generation, time.process_time() - start)
-
-    # Dscomenta aqui ============
     states, aiPlayer = generateFistrState(generation, manyPlays, start)
-
-    print('Agora ele vai jogar')
     generation+=1
     while end - start <= max_time:
         it = 0
         
         print("Time: ", time.process_time() - start)
         
-        neighborhood = generate_states(states, 4, 3, 5) #gerar (4*3) + 3 + (5 crossovers * 3 * 2) = 45
+        neighborhood = createStates(states, 4, 3, 5) #gerar (4*3) + 3 + (5 crossovers * 3 * 2) = 45
         states.clear()
 
         for s in neighborhood:
@@ -577,7 +482,7 @@ def generateFistrState(generation, qtdPlayers, start):
     print('playToIA')
     states = []
     for i in range(30):
-        newState = [random.randint(-100, 100) for _ in range(189)]
+        newState = [random.randint(-100, 100) for _ in range(140)]
         aiPlayer = KeyNeuralClassifier(newState)
         res, value = manyPlaysResults(qtdPlayers)
         #print(newState, generation, it+1, value)
@@ -589,30 +494,6 @@ def generateFistrState(generation, qtdPlayers, start):
     saveStates(states, generation, time.process_time() - start)
 
     return [states, aiPlayer]
-
-
-# Gradiente Ascent
-
-# def gradient_ascent(state, max_time):
-#     start = time.process_time()
-#     res, max_value = manyPlaysResults(3)
-#     better = True
-#     end = 0
-#     while better and end - start <= max_time:
-#         neighborhood = generate_neighborhood(state)
-#         better = False
-#         for s in neighborhood:
-#             aiPlayer = KeyNeuralClassifier(s)
-#             res, value = manyPlaysResults(1)
-#             if value > max_value:
-#                 state = s
-#                 max_value = value
-#                 better = True
-#         end = time.process_time()
-#     return state, max_value
-
-
-
 
 
 def saveStates(states, gen, time):
@@ -632,19 +513,6 @@ def manyPlaysResults(rounds):
     return (results, npResults.mean() - npResults.std())
 
 
-# def main():
-#     global aiPlayer
-
-#     initial_state = [random.randint(-100, 100) for col in range(189)]
-#     aiPlayer = KeyNeuralClassifier(initial_state)
-#     # aiPlayer = KeySimplestClassifier(initial_state)
-#     best_state, best_value = gradient_ascent(initial_state, 5000) 
-#     aiPlayer = KeyNeuralClassifier(best_state)
-#     # aiPlayer = KeySimplestClassifier(best_state)
-#     res, value = manyPlaysResults(30)
-#     npRes = np.asarray(res)
-#     print(res, npRes.mean(), npRes.std(), value)
-
 def main():
     # global aiPlayer
     manyPlays = 3   
@@ -652,7 +520,7 @@ def main():
     states = []
     end = 0
     generation = 1
-    max_time =  24*60*60
+    max_time =  8*60*60
     first_states, aiPlayer = generateFistrState(generation, manyPlays, start)
     best_state, best_value = playToIA(first_states, max_time, manyPlays, start, generation) # rodar por 24 horas
     aiPlayer = KeyNeuralClassifier(best_state)
