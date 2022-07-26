@@ -1,4 +1,4 @@
-from math import tanh, exp
+from math import tanh, exp, sqrt
 import pygame
 import os
 import random
@@ -7,6 +7,9 @@ from sys import exit
 
 from scipy import stats
 import numpy as np
+
+import multiprocessing as mp
+from functools import partial
 
 pygame.init()
 
@@ -245,31 +248,36 @@ class KeyNeuralClassifier(KeyClassifier):
     def __init__(self, weight):
         self.weight = weight
 
-    def getKey(self, obDistance, obHeight, scSpeed, obWidth, diHeight):
-        op1, pos = self.neuronsConnections([obDistance, obWidth, obHeight, scSpeed, diHeight], 5, 7, 0)
-        op2, pos = self.neuronsConnections(op1, 7, 7, pos)
+    def getKey(self, obDistance, obHeight, scSpeed, obWidth, diHeight, obType):
+        op1, pos = self.neuronsConnections([obDistance, obWidth, obHeight, scSpeed, diHeight], 5, 5, 0)
+        # print(op1, pos)
+        # op2, pos = self.neuronsConnections(op1, 5, 5, pos)
         # op3, pos = self.neuronsConnections(op2, 7, 7, pos)
-        op4, pos = self.neuronsConnections(op2, 7, 7, pos)
-        lastOp, pos = self.neuronsConnections(op4, 7, 1, pos)# Quantidade de pessos e dada por = 5*7+2*7*7+7 = 140
+        # op4, pos = self.neuronsConnections(op2, 5, 5, pos)
+        lastOp, pos = self.neuronsConnections(op1, 5, 3, pos)# Quantidade de pessos e dada por = 5*7+2*7*7+7 = 140
 
-        if lastOp[len(lastOp) -1 ] > 0:
-            return "K_UP"
-        return "K_DOWN"
+        keys = ["K_UP", "K_DOWN", "K_NO"]
+        return keys[np.argmax(lastOp)]
+        # if lastOp[len(lastOp) -1 ] < 0:
+        #     return "K_UP"
+        # return "K_DOWN"
         #return "K_NO"
 
     def neuronsConnections(self, value, input, output, position):
-        # print('val=> ', value, '\tinput=> ', input, '\toutput', output, '\tposition', position)
+        # print('self=>', self.weight, 'len weight', len(self.weight), 'val=> ', value, '\tinput=> ', input, '\toutput', output, '\tposition', position)
         neurons = []
         i = 0
         for _ in range(output):
             i += 1
             count = 0
             for j in range(input):
+                # print('j idx', j)
+                # print('w idx', position)
                 count += value[j] * self.weight[position]
                 position += 1
             # neurons.append(sigmoid(count)) # tanh
             neurons.append(tanh(count)) # tanh
-        print(neurons)
+        # print(neurons)
         return [neurons, position]
    
     # def updateWeight(self, weight):
@@ -346,10 +354,14 @@ def playGame():
             userInput = playerKeySelector()
         else:
             # userInput = aiPlayer.keySelector(distance, obHeight, game_speed, obType)
-            userInput = aiPlayer.getKey(distance, obHeight, game_speed, obWidth, player.getXY()[1])
+            # print(distance, obHeight, game_speed, obWidth, player.getXY()[1], obType)
+            userInput = aiPlayer.getKey(distance, obHeight, game_speed, obWidth, player.getXY()[1], obType)
 
         if len(obstacles) == 0 or obstacles[-1].getXY()[0] < spawn_dist:
             spawn_dist = random.randint(0, 670)
+            # obstacles.append(SmallCactus(SMALL_CACTUS))
+            
+
             if random.randint(0, 2) == 0:
                 obstacles.append(SmallCactus(SMALL_CACTUS))
             elif random.randint(0, 2) == 1:
@@ -384,7 +396,8 @@ def playGame():
 
 def changeState(state, position):
     copyState = state.copy()
-    s = state[position]
+    # print(state)
+    s = state[position] # peso da ia no idx position
     vs = random.randint(-20,20)
     ns = s + vs
     if ns < -100:
@@ -422,7 +435,12 @@ def createStates(states, neighborhoodQtd, bestStatesQtd, crossoverQtd):
                 continue
             auxCrossover += crossover(bests[i][1], bests[j][1], crossoverQtd)
 
-    return auxNeighborhood + auxCrossover
+    print ("bests = ", bests)
+    print ("nei = ", auxNeighborhood)
+    print ("cross = ", auxCrossover)
+    print ("bests2 = ", bests)
+
+    return [x[1] for x in bests] + auxNeighborhood + auxCrossover
 
 
 def mutation(state, mutatationRate):
@@ -446,10 +464,21 @@ def crossover(firstState, secondState, rangeChildrens):
         childrens.append(mutation(newState, 0.1))
     return childrens
 
+
+def evaluateNeighbor(s, gen, manyPlays):
+    
+    global aiPlayer
+    aiPlayer = KeyNeuralClassifier(s)
+    
+    res, value = manyPlaysResults(manyPlays)
+    #print(s, generation, it, value)
+    print(generation, it, value)
+    return [value, s]
+
 # best_state, best_value = playToIA(first_states, max_time, manyPlays, start, generation,) # rodar por 24 horas
 def playToIA(states, max_time, manyPlays, start, generation):
     end = 0
-    states, aiPlayer = generateFistrState(generation, manyPlays, start)
+    # states, aiPlayers = generateFistrState(generation, manyPlays, start)
     generation+=1
     while end - start <= max_time:
         it = 0
@@ -457,10 +486,15 @@ def playToIA(states, max_time, manyPlays, start, generation):
         print("Time: ", time.process_time() - start)
         
         neighborhood = createStates(states, 4, 3, 5) #gerar (4*3) + 3 + (5 crossovers * 3 * 2) = 45
+        # (4 * 2) + 2 + (5 * 2 * 2) = 8 + 2 + 20 = 30
         states.clear()
+
+        # with mp.Pool() as pool:
+        #     states = pool.map(partial(evaluateNeighbor, it = it, gen = generation, manyPlays = manyPlays), neighborhood)
 
         for s in neighborhood:
             it+= 1
+            global aiPlayer
             aiPlayer = KeyNeuralClassifier(s)
             
             res, value = manyPlaysResults(manyPlays)
@@ -478,12 +512,14 @@ def playToIA(states, max_time, manyPlays, start, generation):
     return best_state, best_value
 
 def generateFistrState(generation, qtdPlayers, start):
-    global aiPlayer
     print('playToIA')
     states = []
     for i in range(30):
-        newState = [random.randint(-100, 100) for _ in range(140)]
+        # newState = [random.randint(-100, 100) for _ in range(46)]  # 140 # 31 para ter espaço
+        newState = list(np.random.rand(46) * 200 - 100)
+        global aiPlayer
         aiPlayer = KeyNeuralClassifier(newState)
+
         res, value = manyPlaysResults(qtdPlayers)
         #print(newState, generation, it+1, value)
         print(generation, i+1, value)
@@ -493,7 +529,7 @@ def generateFistrState(generation, qtdPlayers, start):
     states.reverse()
     saveStates(states, generation, time.process_time() - start)
 
-    return [states, aiPlayer]
+    return states
 
 
 def saveStates(states, gen, time):
@@ -510,20 +546,24 @@ def manyPlaysResults(rounds):
     for round in range(rounds):
         results += [playGame()]
     npResults = np.asarray(results)
-    return (results, npResults.mean() - npResults.std())
+    return (results, sqrt((npResults.mean() - npResults.std())**2))
 
 
 def main():
-    # global aiPlayer
-    manyPlays = 3   
+    manyPlays = 10
+    qtdPlayers = 10
+    qtdRunsPerPlayer = 10
     start = time.process_time()
     states = []
     end = 0
     generation = 1
     max_time =  8*60*60
-    first_states, aiPlayer = generateFistrState(generation, manyPlays, start)
-    best_state, best_value = playToIA(first_states, max_time, manyPlays, start, generation) # rodar por 24 horas
-    aiPlayer = KeyNeuralClassifier(best_state)
+    # first_states = generateFistrState(generation, manyPlays, start)
+    # best_state, best_value = playToIA(first_states, max_time, manyPlays, start, generation) # rodar por 24 horas
+    first_states = generateFistrState(generation, qtdPlayers, start)
+    # for i in range(max_iter):
+    best_state, best_value = playToIA(first_states, max_time, qtdRunsPerPlayer, start, generation) # rodar por 24 horas
+    # aiPlayer = KeyNeuralClassifier(best_state)
     res, value = manyPlaysResults(30)
     npRes = np.asarray(res)
     print(res, npRes.mean(), npRes.std(), value)
