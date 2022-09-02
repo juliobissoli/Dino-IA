@@ -1,5 +1,9 @@
-from dinoAIrenderless import KeyClassifier, SmallCactus, LargeCactus, Bird
+# from dinoAIrenderless import KeyClassifier, SmallCactus, LargeCactus, Bird
 import numpy as np, pandas as pd
+
+from dinoAI2 import KeyClassifier, SmallCactus, LargeCactus, Bird
+
+
 
 # The state below is the best state found at the end of the 24 hour search.
 
@@ -139,8 +143,10 @@ class FrancoNeuralClassifier (KeyClassifier):
 		output = output_layer[0][0]
 
 		if output < 0:
+			print('K_DOWN')
 			return 'K_DOWN'
 		else:
+			print('K_UP')
 			return 'K_UP'
 
 
