@@ -48,24 +48,27 @@ def main ():
 	# best_state, value, iterations, convergence, timed = genetic (FrancoNeuralClassifier, best_state, 100, 999999999, 0.8, 0.6, 60*60*8.5, 10, 0.1)
 	# init_state =  [random.randrange(1, 10, 1) for i in range(((11 * 8)  + (10 * 6) + 1))]
 	
+	init_state = np.random.rand(11*8 + 9*4 + 5*1) * 20 - 10	
+
 	# Init state para JulioClassifier
-	init_state =  [random.randint(-100, 100) for _ in range(189)]
+	# init_state =  [random.randint(-100, 100) for _ in range(189)]
 	
 	# random.sample(range(2, 10), ((11 * 8)  + (10 * 6) + 1))
 	print(init_state)
 	print('Vai treinar')
-	# best_state, value, iterations, convergence, timed = genetic (FrancoNeuralClassifier, init_state, 100, 999999999, 0.8, 0.6, 60*8, 10, 0.1)
+	aiPlayerTreino = FrancoNeuralClassifier (best_state, 10, [8, 6], 1)
+	best_state, value, iterations, convergence, timed = genetic (FrancoNeuralClassifier, init_state, 100, 999999999, 0.8, 0.6, 60*8, 10, 0.1, 10, [8, 6], 1)
 
 
 	# Usando a minha rede com o GA do Franco
-	best_state, value, iterations, convergence, timed = genetic (JulioClassifier, best_state, 100, 999999999, 0.8, 0.6, 60*2, 10, 0.1)
+	# best_state, value, iterations, convergence, timed = genetic (JulioClassifier, best_state, 100, 999999999, 0.8, 0.6, 60*2, 10, 0.1)
 
 	
 
 	print('++++++Termino o treino++++++\n\n')
 	print('bast_state => ',  best_state)
 
-	aiPlayer = FrancoNeuralClassifier (best_state)
+	aiPlayer = FrancoNeuralClassifier (best_state, 10, [8, 6], 1)
 	res, value = manyPlaysResults (aiPlayer, 1000)
 	npRes = np.asarray (res)
 	print (npRes)

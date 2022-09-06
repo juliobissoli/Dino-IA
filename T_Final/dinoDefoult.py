@@ -251,7 +251,7 @@ def playerKeySelector():
 
 def playGame(aiPlayer, seed):
 	global game_speed, x_pos_bg, y_pos_bg, points, obstacles
-	random.seed (1481)
+	# random.seed (1481)
 
 	run = True
 	clock = pygame.time.Clock()
@@ -364,7 +364,7 @@ def playGame(aiPlayer, seed):
 
 		score()
 
-		clock.tick(60)
+		clock.tick(600)
 		pygame.display.update()
 
 		for obstacle in obstacles:

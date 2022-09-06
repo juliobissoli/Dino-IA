@@ -1,8 +1,8 @@
 import time, numpy as np, random
-from dinoOnlyBackgrond import manyPlaysResults
+from dinoDefoult import manyPlaysResults
 
-def evaluate_state (player_class, state):
-	return manyPlaysResults (player_class (state), 30)[1]
+def evaluate_state (player_class, state, input, hidden, output):
+	return manyPlaysResults (player_class(state, input, hidden, output), 10)[1]
 
 def generate_states (initial_state, lr=0.01):
 	return [[e+lr*int(i==j) for i, e in enumerate (initial_state)] for j in range (len (initial_state))] + [[e-lr*int(i==j) for i, e in enumerate (initial_state)] for j in range (len (initial_state))]
@@ -46,8 +46,8 @@ def convergent (population):
 			return False
 	return True
 
-def evaluate_population (player_class, population):
-	return [(evaluate_state (player_class, state), state) for state in population]
+def evaluate_population (player_class, population, input, hidden, output):
+	return [(evaluate_state(player_class, state, input, hidden, output), state) for state in population]
 
 def elitism (val_pop, pct):
 	return [s for v, s in sorted (val_pop, key=lambda x: x[0], reverse=True)[:max (pct*len (val_pop)//100, 1)]]
@@ -66,21 +66,21 @@ def crossover_step (population, crossover_ratio):
 def mutation_step (population, mutation_ratio, lr=0.01):
 	return [mutation (e, lr) if random.uniform (0, 1) < mutation_ratio else e for e in population]
 
-def genetic (player_class, base_state, pop_size, max_iter, cross_ratio, mut_ratio, max_time, elite_pct, learning_rate=0.01):
+def genetic (player_class, base_state, pop_size, max_iter, cross_ratio, mut_ratio, max_time, elite_pct, learning_rate=0.01, input=10, hidden=[], output=1):
 	print('=========== GA ===============\n\n')
 	start = time.time ()
 	pop = [base_state] + initial_population (pop_size - 1)
 	opt_state = base_state
-	opt_value = evaluate_state (player_class, opt_state)
+	opt_value = evaluate_state (player_class, opt_state, input, hidden, output)
 	last_change_iter = 0
 	last_change_time = time.time ()
 	i = 0
 	try:
 		while not convergent (pop) and i < max_iter and time.time () - start <= max_time:
-			val_pop = evaluate_population (player_class, pop)
+			val_pop = evaluate_population (player_class, pop, input, hidden, output)
 			new_pop = elitism (val_pop, elite_pct)
 			best = new_pop[0].copy ()
-			val_best = evaluate_state (player_class, best)
+			val_best = evaluate_state (player_class, best, input, hidden, output)
 
 			if val_best > opt_value:
 				print ('New best state found')

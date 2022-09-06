@@ -38,13 +38,32 @@ from math import tanh, exp
 # ]
 
 class FrancoNeuralClassifier (KeyClassifier):
-	def __init__(self, state):
-		self.hidden_weights_0 = np.array (state[:80]).reshape (10, 8)
-		self.hidden_bias_0 = np.array (state[80:88]).reshape (1, 8)
-		self.hidden_weights_1 = np.array (state[88:136]).reshape (8, 6)
-		self.hidden_bias_1 = np.array (state[136:142]).reshape (1, 6)
-		self.output_weights = np.array (state[142:148]).reshape (6, 1)
-		self.output_bias = np.array (state[148]).reshape (1, 1)
+	def __init__(self, state, input, hidden, output):
+
+
+		state_start = 0
+		state_end = state_start + input*hidden[0]
+		self.hidden_weights = [np.array (state[state_start:state_end]).reshape (input, hidden[0])]
+		state_start = state_end
+		state_end = state_start + hidden[0] 
+		self.hidden_bias = [np.array (state[state_start:state_end]).reshape (1, hidden[0])]
+		i = 0
+		while i+1 < len(hidden):
+
+			state_start = state_end
+			state_end = state_start + hidden[i]*hidden[i+1] 
+			self.hidden_weights.append(np.array (state[state_start:state_end]).reshape (hidden[i], hidden[i+1]))
+			state_start = state_end
+			state_end = state_start + hidden[i+1] 
+			self.hidden_bias.append(np.array (state[state_start:state_end]).reshape (1, hidden[i+1]))
+			i+=1
+
+		state_start = state_end
+		state_end = state_start + hidden[i]*output 
+		self.output_weights = np.array (state[state_start:state_end]).reshape (hidden[i], output)
+		state_start = state_end
+		state_end = state_start + output 
+		self.output_bias = np.array (state[state_start:state_end]).reshape (1, output)
 
 	def keySelector(self, speed, obstacles, player):
 		# The inputs to this function are the game speed, the full list of
@@ -131,15 +150,14 @@ class FrancoNeuralClassifier (KeyClassifier):
 
 		input_layer = np.array ([time_to_cross_obs, is_obstacle_high_bird, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs]).reshape (1, 10)
 
-		hidden_layer_0 = np.matmul (input_layer, self.hidden_weights_0)
-		hidden_layer_0 += self.hidden_bias_0
-		hidden_layer_0 = (hidden_layer_0 > 0).astype (float)
-		hidden_layer_1 = np.matmul (hidden_layer_0, self.hidden_weights_1)
-		hidden_layer_1 += self.hidden_bias_1
-		hidden_layer_1 = (hidden_layer_1 > 0).astype (float)
-		output_layer = np.matmul (hidden_layer_1, self.output_weights)
+		hidden_layer = input_layer
+		for hw,hb in zip(self.hidden_weights, self.hidden_bias):
+			hidden_layer =  np.matmul (hidden_layer, hw)
+			hidden_layer += hb 
+			hidden_layer = (hidden_layer > 0).astype (float)
+		
+		output_layer = np.matmul (hidden_layer, self.output_weights)
 		output_layer += self.output_bias
-
 
 		output = output_layer[0][0]
 
