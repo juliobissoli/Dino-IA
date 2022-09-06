@@ -3,6 +3,7 @@ import numpy as np, pandas as pd
 
 from dinoDefoult import KeyClassifier, SmallCactus, LargeCactus, Bird
 
+from math import tanh, exp
 
 
 # The state below is the best state found at the end of the 24 hour search.
@@ -182,3 +183,57 @@ class FrancoNeuralClassifier (KeyClassifier):
 		delta = max((v-a/2)*(v-a/2)+2*dy*a, 0)**0.5
 		roots = [(-(v-a/2)-delta)/a, (-(v-a/2)+delta)/a]
 		return (min (roots), max (roots), )
+
+
+
+    # def getKey(self, obDistance, obHeight, scSpeed, obWidth, diHeight):
+class JulioClassifier (KeyClassifier):
+    def __init__(self, weight):
+        self.weight = weight
+
+    def	keySelector(self, speed, obstacles, player):
+        distance = 1500
+        obHeight = 0
+        obType = 2
+        obWidth = 0
+        diHeight = player.getXY()[1]
+        if len(obstacles) != 0:
+            xy = obstacles[0].getXY()
+            distance = xy[0]
+            obHeight = obstacles[0].getHeight()
+            obType = obstacles[0]
+            obWidth = obstacles[0].rect.width
+
+        op1, pos = self.neuronsConnections([distance, obWidth, obHeight, speed, diHeight], 5, 7, 0)
+        op2, pos = self.neuronsConnections(op1, 7, 7, pos)
+        op3, pos = self.neuronsConnections(op2, 7, 7, pos)
+        op4, pos = self.neuronsConnections(op3, 7, 7, pos)
+        lastOp, pos = self.neuronsConnections(op4, 7, 1, pos)# qtdWeight = 5*7+3*7*7+7 = 189
+        # print(lastOp[0])
+        # if lastOp[0] > 0.9:
+        if lastOp[len(lastOp) -1 ] > 0:
+            return "K_UP"
+        return "K_DOWN"
+        #return "K_NO"
+
+
+    # def keySelector(game_speed, obstacles, player):
+    #     this.getKey(distance, obHeight, game_speed, obWidth, player.getXY()[1])
+
+    def neuronsConnections(self, value, input, output, position):
+        # print('val=> ', value, '\tinput=> ', input, '\toutput', output, '\tposition', position)
+        neurons = []
+        i = 0
+        for _ in range(output):
+            i += 1
+            count = 0
+            for j in range(input):
+                count += value[j] * self.weight[position]
+                position += 1
+            # neurons.append(sigmoid(count)) # tanh
+            neurons.append(tanh(count)) # tanh
+        return [neurons, position]
+   
+    # def updateWeight(self, weight):
+    #     self.weight = weight
+

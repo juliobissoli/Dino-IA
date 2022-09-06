@@ -67,6 +67,7 @@ def mutation_step (population, mutation_ratio, lr=0.01):
 	return [mutation (e, lr) if random.uniform (0, 1) < mutation_ratio else e for e in population]
 
 def genetic (player_class, base_state, pop_size, max_iter, cross_ratio, mut_ratio, max_time, elite_pct, learning_rate=0.01):
+	print('=========== GA ===============\n\n')
 	start = time.time ()
 	pop = [base_state] + initial_population (pop_size - 1)
 	opt_state = base_state

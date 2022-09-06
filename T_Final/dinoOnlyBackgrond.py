@@ -194,6 +194,7 @@ class KeySimplestClassifier(KeyClassifier):
 		self.state = state
 
 	def keySelector(self, distance, obHeight, speed, obType):
+		print('Bateu aqui ===> ')
 		self.state = sorted(self.state, key=first)
 		for s, d in self.state:
 			if speed < s:
