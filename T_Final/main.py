@@ -1,39 +1,46 @@
 # from dinoAI import *
-from dinoDefoul import *
+from dinoDefoult import *
 # from dinoOnlyBackgrond import *
 import numpy as np
+# import time, numpy as np, random
+import random
 
-# from searches import genetic
+from searches import genetic
 from classifiers import FrancoNeuralClassifier
+
+
+def generateFirstState():
+	return random.sample(range(2, 10), ((11 * 8)  + (10 * 6) + 1))
+
 
 def main ():
 	INITIAL_TIME = time.time()
 
 	best_state = [
-		-1.5, 0.0, 1.0, -0.9, -0.5, 0.0, -0.5, 0.0,
-		91.5, 0.0, -1.0, 0.9, 0.0, 0.0, 0.4, 0.5,
-		-0.6, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-		0.0, 1.0, 0.0, 0.1, 0.0, 0.0, 0.5, 0.0,
-		-0.4, 0.0, -0.1, 2.9, 0.5, 0.0, 0.0, 0.0,
-		0.0, 0.0, -1.0, 0.0, 0.5, 0.0, 0.5, -0.1,
-		0.0, -0.5, 0.0, 0.0, 0.0, 1.0, 0.5, -2.0,
-		0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 1.5, 0.0,
-		-0.1, 0.0, 0.0, -0.5, 0.0, 0.0, 0.1, -0.9,
-		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.5, # Hidden layer 0 weights
+		-1.5, 	0.0, 	1.0, 	-0.9, 	-0.5, 	0.0,	-0.5, 	0.0,
+		91.5, 	0.0, 	-1.0, 	0.9, 	0.0, 	0.0,	0.4, 	0.5,
+		-0.6, 	-1.0, 	0.0, 	0.0, 	0.0, 	0.0,	0.0, 	0.0,
+		0.0, 	1.0, 	0.0, 	0.1, 	0.0, 	0.0,	0.5, 	0.0,
+		-0.4, 	0.0, 	-0.1, 	2.9, 	0.5, 	0.0,	0.0, 	0.0,
+		0.0, 	0.0, 	-1.0, 	0.0, 	0.5, 	0.0,	0.5, 	-0.1,
+		0.0, 	-0.5, 	0.0, 	0.0, 	0.0, 	1.0,	0.5, 	-2.0,
+		0.0, 	0.0, 	0.0, 	0.0, 	0.1, 	0.0,	1.5, 	0.0,
+		-0.1, 	0.0, 	0.0, 	-0.5, 	0.0, 	0.0,	0.1, 	-0.9,
+		0.0, 	0.0, 	0.0, 	0.0, 	0.0, 	0.0,	0.0, 	1.5, # Hidden layer 0 weights
 		
-		0.0, -0.5, 0.0, 11.6, 0.0, -0.5, 0.5, 2.1, # Hidden layer 0 biases
+		0.0, 	-0.5, 	0.0, 	11.6, 	0.0, 	-0.5, 	0.5, 	2.1, # Hidden layer 0 biases
 		
-		1.0, 0.0, 0.0, 0.0, -0.5, 0.5,
-		-0.5, 0.5,0.5, 0.5, 0.1, 0.0,
-		0.0, -0.4, 0.5, -0.5, 0.0, 0.0,
-		0.0, -0.5, 1.0, 0.0, -0.6, -0.6,
-		0.0, 0.5, -0.2, 1.0, 1.0, -0.5,
-		0.0, 0.0, 0.5, -0.5, 1.0, 0.0,
-		0.0, 0.0, 0.0, 0.0, 1.5, -1.0,
-		0.0, 0.0, 0.4, 0.5, 1.0, 1.0,
-		-0.1, 0.0, -1.5, 0.0, -1.5, 0.0, # Hidden layer 1 weights
+		1.0, 	0.0, 	0.0,	 0.0,	 -0.5,	0.5,
+		-0.5, 	0.5,	0.5,	 0.5,	 0.1,	0.0,
+		0.0, 	-0.4, 	0.5,	 -0.5,	 0.0,	0.0,
+		0.0, 	-0.5, 	1.0,	 0.0,	 -0.6,	-0.6,
+		0.0, 	0.5, 	-0.2,	 1.0,	 1.0,	-0.5,
+		0.0, 	0.0, 	0.5,	 -0.5,	 1.0,	0.0,
+		0.0, 	0.0, 	0.0,	 0.0,	 1.5,	-1.0,
+		0.0, 	0.0, 	0.4,	 0.5,	 1.0,	1.0,
+		-0.1, 	0.0, 	-1.5,	 0.0,	 -1.5,	0.0, # Hidden layer 1 weights
 		
-		-8.0, 2.5, 3.0, -2.4, 1.0, 1.5, # Hidden layer 1 biases
+		-8.0,	2.5,	 3.0, 	-2.4, 	1.0, 	1.5, # Hidden layer 1 biases
 		
 		-0.5 # Output layer bias
 	]
@@ -41,6 +48,16 @@ def main ():
 	np.set_printoptions (3)
 
 	# best_state, value, iterations, convergence, timed = genetic (FrancoNeuralClassifier, best_state, 100, 999999999, 0.8, 0.6, 60*60*8.5, 10, 0.1)
+	init_state =  [random.randrange(1, 10, 1) for i in range(((11 * 8)  + (10 * 6) + 1))]
+
+	
+	# random.sample(range(2, 10), ((11 * 8)  + (10 * 6) + 1))
+	print(init_state)
+	print('Vai treinar')
+	best_state, value, iterations, convergence, timed = genetic (FrancoNeuralClassifier, best_state, 100, 999999999, 0.8, 0.6, 60*2, 10, 0.1)
+
+	print('++++++Termino o treino++++++\n\n')
+	print('bast_state => ',  best_state)
 
 	aiPlayer = FrancoNeuralClassifier (best_state)
 	res, value = manyPlaysResults (aiPlayer, 1000)
