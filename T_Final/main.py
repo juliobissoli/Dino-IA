@@ -7,8 +7,8 @@ import numpy as np
 # import time, numpy as np, random
 import random
 
-from searches import genetic
-from classifiers import FrancoNeuralClassifier, NeuralClassifier
+# from searches import genetic
+from classifiers import *
 
 
 def main ():
@@ -49,24 +49,13 @@ def main ():
 	# init_state =  [random.randrange(1, 10, 1) for i in range(((11 * 8)  + (10 * 6) + 1))]
 	
 	init_state = list(np.random.rand(11*8 + 9*6 + 7*1) * 11 - 2)
-	init_state[8] = 91.5
-	# init_state = list (np.random.randint (-100, 101, 149))
-
-	# Init state para JulioClassifier
-	# init_state =  [random.randint(-100, 100) for _ in range(189)]
 	
-	# random.sample(range(2, 10), ((11 * 8)  + (10 * 6) + 1))
 	print(init_state)
 	print(len(best_state))
 	print('Vai treinar')
 	# aiPlayerTreino = FrancoNeuralClassifier (best_state, 10, [8, 6], 1)
-	# best_state, value, iterations, convergence, timed = genetic(NeuralClassifier, init_state, 30, 999999999, 0.8, 0.6, 60*60*8, 10, 0.1, 10, [8, 6], 1)
+	best_state, value, iterations, convergence, timed = genetic(NeuralClassifier, init_state, 30, 999999999, 0.8, 0.6, 60*60*8, 10, 0.1, 10, [8, 6], 1)
 
-
-	# Usando a minha rede com o GA do Franco
-	# best_state, value, iterations, convergence, timed = genetic (JulioClassifier, best_state, 100, 999999999, 0.8, 0.6, 60*2, 10, 0.1)
-
-	
 
 	print('\n\n++++++++++++++++++++++++++++')
 	print('++++++Termino o treino++++++')

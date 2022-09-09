@@ -5,289 +5,107 @@ from dinoDefoult import KeyClassifier, SmallCactus, LargeCactus, Bird
 
 from math import tanh, exp
 
-
-# The state below is the best state found at the end of the 24 hour search.
-
-# best_state = [
-# 	-1.5, 0.0, 1.0, -0.9, -0.5, 0.0, -0.5, 0.0,
-# 	91.5, 0.0, -1.0, 0.9, 0.0, 0.0, 0.4, 0.5,
-# 	-0.6, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-# 	0.0, 1.0, 0.0, 0.1, 0.0, 0.0, 0.5, 0.0,
-# 	-0.4, 0.0, -0.1, 2.9, 0.5, 0.0, 0.0, 0.0,
-# 	0.0, 0.0, -1.0, 0.0, 0.5, 0.0, 0.5, -0.1,
-# 	0.0, -0.5, 0.0, 0.0, 0.0, 1.0, 0.5, -2.0,
-# 	0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 1.5, 0.0,
-# 	-0.1, 0.0, 0.0, -0.5, 0.0, 0.0, 0.1, -0.9,
-# 	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.5, # Hidden layer 0 weights
-	
-# 	0.0, -0.5, 0.0, 11.6, 0.0, -0.5, 0.5, 2.1, # Hidden layer 0 biases
-	
-# 	1.0, 0.0, 0.0, 0.0, -0.5, 0.5,
-# 	-0.5, 0.5,0.5, 0.5, 0.1, 0.0,
-# 	0.0, -0.4, 0.5, -0.5, 0.0, 0.0,
-# 	0.0, -0.5, 1.0, 0.0, -0.6, -0.6,
-# 	0.0, 0.5, -0.2, 1.0, 1.0, -0.5,
-# 	0.0, 0.0, 0.5, -0.5, 1.0, 0.0,
-# 	0.0, 0.0, 0.0, 0.0, 1.5, -1.0,
-# 	0.0, 0.0, 0.4, 0.5, 1.0, 1.0,
-# 	-0.1, 0.0, -1.5, 0.0, -1.5, 0.0, # Hidden layer 1 weights
-	
-# 	-8.0, 2.5, 3.0, -2.4, 1.0, 1.5, # Hidden layer 1 biases
-	
-# 	-0.5 # Output layer bias
-# ]
-
-class FrancoNeuralClassifier (KeyClassifier):
-	def __init__(self, state, input, hidden, output):
-		self.hidden_weights_0 = np.array (state[:80]).reshape (10, 8)
-		self.hidden_bias_0 = np.array (state[80:88]).reshape (1, 8)
-		self.hidden_weights_1 = np.array (state[88:136]).reshape (8, 6)
-		self.hidden_bias_1 = np.array (state[136:142]).reshape (1, 6)
-		self.output_weights = np.array (state[142:148]).reshape (6, 1)
-		self.output_bias = np.array (state[148]).reshape (1, 1)
-
-	def keySelector(self, speed, obstacles, player):
-		# The inputs to this function are the game speed, the full list of
-		# obstacles, and the dinossaur object stored in the "player" variable.
-
-
-		# Data preprocessing
-		
-		# Sometimes, the the first obstacle in the "obstacle" list is behind
-		# the dinosaur. As an obstacle behind the dinosaur is irrelevant, this
-		# code ignores all first elements of the list, until an obstacle appears
-		# that is in front of the dinosaur.
-
-		# Since the second object is only used to check if the Dino should jump
-		# two obstacles at once, the second obstacle is ignored if it is a high
-		# bird.
-		obs = []
-		for i in range (len (obstacles)):
-			distance = obstacles[i].rect.right - player.dino_rect.left - speed
-			if distance > 0:
-				obs.append (obstacles[i])
-				if i + 1 < len (obstacles):
-					if not (obstacles[i+1].__class__.__name__ == 'Bird' and obstacles[i+1].getHeight() > 50):
-						obs.append (obstacles[i+1])
-				break
-		
-		# The information given in the function input is delayed by one frame,
-		# and must be corrected.
-		dino_feet_pos = player.dino_rect.bottom - player.jump_vel
-		dino_current_vertical_speed = player.jump_vel - player.jump_grav
-		ground_top = player.Y_POS_DUCK+(player.dino_rect.bottom - player.dino_rect.top)
-		distance_dino_bottom_ground_top = - (ground_top - dino_feet_pos)
-		is_dino_jumping = int (player.dino_jump)
-
-		distance_to_cross_obs = 0
-		distance_to_reach_obs = 0
-		distance_obs_top_dino_bottom = 0
-		distance_to_reach_next_obs = 0
-		next_obs_height = 0
-		is_obstacle_high_bird = 0
-		is_obstacle_large_cactus = 0
-
-		if len (obs) > 0:
-			is_obstacle_high_bird = int (obs[0].__class__.__name__ == 'Bird' and obs[0].getHeight() > 50)
-			is_obstacle_large_cactus = int (obs[0].__class__.__name__ == 'LargeCactus')
-
-			distance_to_cross_obs = obs[0].rect.right - player.dino_rect.left - speed
-			distance_to_reach_obs = obs[0].rect.left - player.dino_rect.right - speed
-			# Distances in the Y axis must be inverted, since
-			# the Y axis grows down
-			distance_obs_top_dino_bottom = - (obs[0].rect.top - dino_feet_pos)
-
-		if len (obs) > 1:
-			distance_to_reach_next_obs = obs[1].rect.left - player.dino_rect.right - speed
-			next_obs_height = - (obs[1].rect.top - ground_top)
-
-		# Time to cross horizontal distances is simple, as the increase in speed
-		# is infrequent enough not to interfere in calculations. The time then
-		# is simply distance/speed.
-		time_to_reach_obs = distance_to_reach_obs/speed
-		time_to_cross_obs = distance_to_cross_obs/speed
-		time_to_be_above_obs = -100
-		if distance_obs_top_dino_bottom > 0: 
-			# Time to cross vertical distances need to consider acceleration,
-			# and therefore need one of the solutions to a second degree
-			# equation.
-			time_to_be_above_obs = self.parabola_roots (distance_obs_top_dino_bottom, 17, -1.1)[0]
-		time_to_reach_obs_top_holding_down = self.parabola_roots (distance_obs_top_dino_bottom, dino_current_vertical_speed, -4.4)[1]
-		time_to_reach_ground_holding_down = self.parabola_roots (distance_dino_bottom_ground_top, dino_current_vertical_speed, -4.4)[1]
-		time_to_reach_next_obs = 0
-		time_to_be_above_next_obs_from_ground = 0
-		time_to_be_above_next_obs_from_here = 0
-
-		if distance_to_reach_next_obs > 0:
-			time_to_reach_next_obs = distance_to_reach_next_obs/speed
-			time_to_be_above_next_obs_from_ground = self.parabola_roots (next_obs_height, 17, -1.1)[0]
-			time_to_be_above_next_obs_from_here = time_to_reach_ground_holding_down + time_to_be_above_next_obs_from_ground
-
-		KEY = self.classify (time_to_cross_obs, is_obstacle_high_bird, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs)
-
-		return KEY
-
-	def classify(self, time_to_cross_obs, is_obstacle_high_bird, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs):
-
-		input_layer = np.array([time_to_cross_obs, is_obstacle_high_bird, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs]).reshape (1, 10)
-
-		hidden_layer_0 = np.matmul (input_layer, self.hidden_weights_0)
-		hidden_layer_0 += self.hidden_bias_0
-		hidden_layer_0 = (hidden_layer_0 > 0).astype (float)
-		hidden_layer_1 = np.matmul (hidden_layer_0, self.hidden_weights_1)
-		hidden_layer_1 += self.hidden_bias_1
-		hidden_layer_1 = (hidden_layer_1 > 0).astype (float)
-		output_layer = np.matmul (hidden_layer_1, self.output_weights)
-		output_layer += self.output_bias
-
-
-		output = output_layer[0][0]
-
-		if output < 0:
-			return 'K_DOWN'
-		else:
-			return 'K_UP'
-
-
-	def updateState(self, state):
-		self.__init__ (state)
-
-
-	def parabola_roots (self, dy, v, a):
-		# The vertical position of the dinossaur is modified by "v" every frame.
-		# Besides that, "v" gets modified by "a" also every frame.
-		# We can use the above to calculate the position of the dinossaur at
-		# any frame:
-		# v(0) = v_0
-		# y(0) = y_0
-		# y(t) = y(t - 1) + v(t - 1)
-		# v(t) = v(t - 1) + a
-		# Solving the above we have
-		# v(t) = v_0 + t*a
-		# y(t) = y_0 + sum from i=0 to i=t-1 of v(i)
-		# y(t) = y_0 + t*v_0 + (1*a + 2*a + ... + (t-1)*a)
-		# y(t) = y_0 + t*v_0 + (t-1)*t*a/2
-		# Since y(t) - y_0 = dy
-		# 0 = -dy + t*v_0 + t^2*a/2 - t*a/2
-		# 0 = -dy + t*(v_0 - a/2) + t^2*a/2
-		# Solving the above for "t" gives
-		# delta = (v-a/2)^2 +2*dy*a
-		# t_1 = (-(v_0 - a/2) + sqrt (delta))/a
-		# t_2 = (-(v_0 - a/2) - sqrt (delta))/a
-		# The smaller of the solutions represent the first time the
-		# dinossaur crosses the difference "dy", and the greater represets
-		# the second.
-
-		delta = max((v-a/2)*(v-a/2)+2*dy*a, 0)**0.5
-		roots = [(-(v-a/2)-delta)/a, (-(v-a/2)+delta)/a]
-		return (min (roots), max (roots), )
-
+from itertools import count
+import time, numpy as np, random
+from dinoDefoult import manyPlaysResults
+# from dinoOnlyBackgrond import manyPlaysResults
 
 
 class NeuralClassifier(KeyClassifier):
 	def __init__(self, state, input, hidden, output):
 
-		state_start = 0
-		state_end = state_start + input*hidden[0]
-		self.hidden_weights = [np.array (state[state_start:state_end]).reshape (input, hidden[0])]
-		state_start = state_end
-		state_end = state_start + hidden[0] 
-		self.hidden_bias = [np.array (state[state_start:state_end]).reshape (1, hidden[0])]
+		initState = 0
+		endState = initState + input*hidden[0]
+		self.hidden_weights = [np.array(state[initState:endState]).reshape(input, hidden[0])]
+		initState = endState
+		endState = initState + hidden[0] 
+		self.hidden_bias = [np.array(state[initState:endState]).reshape(1, hidden[0])]
 		i = 0
 		while i+1 < len(hidden):
-			state_start = state_end
-			state_end = state_start + hidden[i]*hidden[i+1] 
-			self.hidden_weights.append(np.array(state[state_start:state_end]).reshape(hidden[i], hidden[i+1]))
-			state_start = state_end
-			state_end = state_start + hidden[i+1] 
-			self.hidden_bias.append(np.array(state[state_start:state_end]).reshape(1, hidden[i+1]))
+			initState = endState
+			endState = initState + hidden[i]*hidden[i+1] 
+			self.hidden_weights.append(np.array(state[initState:endState]).reshape(hidden[i], hidden[i+1]))
+			initState = endState
+			endState = initState + hidden[i+1] 
+			self.hidden_bias.append(np.array(state[initState:endState]).reshape(1, hidden[i+1]))
 			i+=1
 
-		state_start = state_end
-		state_end = state_start + hidden[i]*output 
-		self.output_weights = np.array (state[state_start:state_end]).reshape (hidden[i], output)
-		state_start = state_end
-		state_end = state_start + output 
-		self.output_bias = np.array (state[state_start:state_end]).reshape (1, output)
+		initState = endState
+		endState = initState + hidden[i]*output 
+		self.output_weights = np.array(state[initState:endState]).reshape(hidden[i], output)
+		initState = endState
+		endState = initState + output 
+		self.output_bias = np.array(state[initState:endState]).reshape(1, output)
 
 	def keySelector(self, speed, obstacles, player):
 		obs = []
-		for i in range (len (obstacles)):
+		for i in range(len(obstacles)):
 			distance = obstacles[i].rect.right - player.dino_rect.left - speed
 			if distance > 0:
-				obs.append (obstacles[i])
-				if i + 1 < len (obstacles):
-					if not (obstacles[i+1].__class__.__name__ == 'Bird' and obstacles[i+1].getHeight() > 50):
-						obs.append (obstacles[i+1])
+				obs.append(obstacles[i])
+				if i + 1 < len(obstacles):
+					if not(obstacles[i+1].__class__.__name__ == 'Bird' and obstacles[i+1].getHeight() > 50):
+						obs.append(obstacles[i+1])
 				break
 		
-		# The information given in the function input is delayed by one frame,
-		# and must be corrected.
 		dino_feet_pos = player.dino_rect.bottom - player.jump_vel
 		dino_current_vertical_speed = player.jump_vel - player.jump_grav
 		ground_top = player.Y_POS_DUCK+(player.dino_rect.bottom - player.dino_rect.top)
-		distance_dino_bottom_ground_top = - (ground_top - dino_feet_pos)
-		is_dino_jumping = int (player.dino_jump)
+		distance_dino_bottom_ground_top = -(ground_top - dino_feet_pos)
+		is_dino_jumping = int(player.dino_jump)
 
 		distance_to_cross_obs = 0
 		distance_to_reach_obs = 0
 		distance_obs_top_dino_bottom = 0
 		distance_to_reach_next_obs = 0
 		next_obs_height = 0
-		is_obstacle_high_bird = 0
+		isBirdHigh = 0
 		is_obstacle_large_cactus = 0
 
-		if len (obs) > 0:
-			is_obstacle_high_bird = int (obs[0].__class__.__name__ == 'Bird' and obs[0].getHeight() > 50)
-			is_obstacle_large_cactus = int (obs[0].__class__.__name__ == 'LargeCactus')
+		if len(obs) > 0:
+			isBirdHigh = int(obs[0].__class__.__name__ == 'Bird' and obs[0].getHeight() > 50)
+			is_obstacle_large_cactus = int(obs[0].__class__.__name__ == 'LargeCactus')
 
 			distance_to_cross_obs = obs[0].rect.right - player.dino_rect.left - speed
 			distance_to_reach_obs = obs[0].rect.left - player.dino_rect.right - speed
 			# Distances in the Y axis must be inverted, since
 			# the Y axis grows down
-			distance_obs_top_dino_bottom = - (obs[0].rect.top - dino_feet_pos)
+			distance_obs_top_dino_bottom = -(obs[0].rect.top - dino_feet_pos)
 
-		if len (obs) > 1:
+		if len(obs) > 1:
 			distance_to_reach_next_obs = obs[1].rect.left - player.dino_rect.right - speed
-			next_obs_height = - (obs[1].rect.top - ground_top)
-
-		# Time to cross horizontal distances is simple, as the increase in speed
-		# is infrequent enough not to interfere in calculations. The time then
-		# is simply distance/speed.
+			next_obs_height = -(obs[1].rect.top - ground_top)
 		time_to_reach_obs = distance_to_reach_obs/speed
 		time_to_cross_obs = distance_to_cross_obs/speed
 		time_to_be_above_obs = -100
 		if distance_obs_top_dino_bottom > 0: 
-			# Time to cross vertical distances need to consider acceleration,
-			# and therefore need one of the solutions to a second degree
-			# equation.
-			time_to_be_above_obs = self.parabola_roots (distance_obs_top_dino_bottom, 17, -1.1)[0]
-		time_to_reach_obs_top_holding_down = self.parabola_roots (distance_obs_top_dino_bottom, dino_current_vertical_speed, -4.4)[1]
-		time_to_reach_ground_holding_down = self.parabola_roots (distance_dino_bottom_ground_top, dino_current_vertical_speed, -4.4)[1]
+			time_to_be_above_obs = self.parabola_roots(distance_obs_top_dino_bottom, 17, -1.1)[0]
+		time_to_reach_obs_top_holding_down = self.parabola_roots(distance_obs_top_dino_bottom, dino_current_vertical_speed, -4.4)[1]
+		time_to_reach_ground_holding_down = self.parabola_roots(distance_dino_bottom_ground_top, dino_current_vertical_speed, -4.4)[1]
 		time_to_reach_next_obs = 0
 		time_to_be_above_next_obs_from_ground = 0
 		time_to_be_above_next_obs_from_here = 0
 
 		if distance_to_reach_next_obs > 0:
 			time_to_reach_next_obs = distance_to_reach_next_obs/speed
-			time_to_be_above_next_obs_from_ground = self.parabola_roots (next_obs_height, 17, -1.1)[0]
+			time_to_be_above_next_obs_from_ground = self.parabola_roots(next_obs_height, 17, -1.1)[0]
 			time_to_be_above_next_obs_from_here = time_to_reach_ground_holding_down + time_to_be_above_next_obs_from_ground
 
-		KEY = self.classify (time_to_cross_obs, is_obstacle_high_bird, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs)
+		KEY = self.classify(time_to_cross_obs, isBirdHigh, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs)
 
 		return KEY
 
-	def classify (self, time_to_cross_obs, is_obstacle_high_bird, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs):
+	def classify(self, time_to_cross_obs, isBirdHigh, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs):
 
-		input_layer = np.array ([time_to_cross_obs, is_obstacle_high_bird, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs]).reshape (1, 10)
+		input_layer = np.array([time_to_cross_obs, isBirdHigh, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs]).reshape(1, 10)
 
 		hidden_layer = input_layer
 		for hw,hb in zip(self.hidden_weights, self.hidden_bias):
-			hidden_layer =  np.matmul (hidden_layer, hw)
+			hidden_layer =  np.matmul(hidden_layer, hw)
 			hidden_layer += hb 
-			hidden_layer = (hidden_layer > 0).astype (float)
+			hidden_layer =(hidden_layer > 0).astype(float)
 		
-		output_layer = np.matmul (hidden_layer, self.output_weights)
+		output_layer = np.matmul(hidden_layer, self.output_weights)
 		output_layer += self.output_bias
 
 		output = output_layer[0][0]
@@ -301,89 +119,161 @@ class NeuralClassifier(KeyClassifier):
 
 
 	def updateState(self, state):
-		self.__init__ (state)
+		self.__init__(state)
 
 
-	def parabola_roots (self, dy, v, a):
-		# The vertical position of the dinossaur is modified by "v" every frame.
-		# Besides that, "v" gets modified by "a" also every frame.
-		# We can use the above to calculate the position of the dinossaur at
-		# any frame:
-		# v(0) = v_0
-		# y(0) = y_0
-		# y(t) = y(t - 1) + v(t - 1)
-		# v(t) = v(t - 1) + a
-		# Solving the above we have
-		# v(t) = v_0 + t*a
-		# y(t) = y_0 + sum from i=0 to i=t-1 of v(i)
-		# y(t) = y_0 + t*v_0 + (1*a + 2*a + ... + (t-1)*a)
-		# y(t) = y_0 + t*v_0 + (t-1)*t*a/2
-		# Since y(t) - y_0 = dy
-		# 0 = -dy + t*v_0 + t^2*a/2 - t*a/2
-		# 0 = -dy + t*(v_0 - a/2) + t^2*a/2
-		# Solving the above for "t" gives
-		# delta = (v-a/2)^2 +2*dy*a
-		# t_1 = (-(v_0 - a/2) + sqrt (delta))/a
-		# t_2 = (-(v_0 - a/2) - sqrt (delta))/a
-		# The smaller of the solutions represent the first time the
-		# dinossaur crosses the difference "dy", and the greater represets
-		# the second.
-
+	def parabola_roots(self, dy, v, a):
 		delta = max((v-a/2)*(v-a/2)+2*dy*a, 0)**0.5
-		roots = [(-(v-a/2)-delta)/a, (-(v-a/2)+delta)/a]
-		return (min (roots), max (roots), )
+		roots = [(-(v-a/2)-delta)/a,(-(v-a/2)+delta)/a]
+		return(min(roots), max(roots), )
 
 
 
-    # def getKey(self, obDistance, obHeight, scSpeed, obWidth, diHeight):
 
-# class JulioClassifier (KeyClassifier):
-#     def __init__(self, weight):
-#         self.weight = weight
+# ++++ GA ++++++
 
-#     def	keySelector(self, speed, obstacles, player):
-#         distance = 1500
-#         obHeight = 0
-#         obType = 2
-#         obWidth = 0
-#         diHeight = player.getXY()[1]
-#         if len(obstacles) != 0:
-#             xy = obstacles[0].getXY()
-#             distance = xy[0]
-#             obHeight = obstacles[0].getHeight()
-#             obType = obstacles[0]
-#             obWidth = obstacles[0].rect.width
+def getBestPlayerResult(player_class, state, input, hidden, output):
+	return manyPlaysResults(player_class(state, input, hidden, output), 10)[1]
 
-#         op1, pos = self.neuronsConnections([distance, obWidth, obHeight, speed, diHeight], 5, 7, 0)
-#         op2, pos = self.neuronsConnections(op1, 7, 7, pos)
-#         op3, pos = self.neuronsConnections(op2, 7, 7, pos)
-#         op4, pos = self.neuronsConnections(op3, 7, 7, pos)
-#         lastOp, pos = self.neuronsConnections(op4, 7, 1, pos)# qtdWeight = 5*7+3*7*7+7 = 189
-#         # print(lastOp[0])
-#         # if lastOp[0] > 0.9:
-#         if lastOp[len(lastOp) -1 ] > 0:
-#             return "K_UP"
-#         return "K_DOWN"
-#         #return "K_NO"
+# def generate_states(initial_state, lr=0.01):
+# 	return [[e+lr*int(i==j) for i, e in enumerate(initial_state)] for j in range(len(initial_state))] + [[e-lr*int(i==j) for i, e in enumerate(initial_state)] for j in range(len(initial_state))]
+
+# def states_total_value(states):
+# 	return sum([max(e[0], 0) for e in states])
+
+def roulette_construction(states):
+	# total_value = states_total_value(states)
+	total_value = sum([max(e[0], 0) for e in states])
+	roulette = [(max(e[0],0)/total_value, e[1]) for e in states]
+	for i in range(1, len(roulette)):
+		roulette[i] =(roulette[i][0]+roulette[i-1][0], roulette[i][1])
+	return roulette
+
+def roulette_run(rounds, roulette):
+	return [roulette[np.searchsorted([e[0] for e in roulette], random.uniform(0,1))][1] for _ in range(rounds)]
+
+def selection(value_population, n):
+	return roulette_run(n, roulette_construction(value_population))
+
+# def crossover(dad, mom):
+# 	r = random.randint(0, len(dad) - 1)
+# 	return dad[:r] + mom[r:], mom[:r] + dad[r:]
+
+def crossover2(dad, mom): 
+	alfa = np.random.rand()
+	dad = np.array(dad)
+	mom = np.array(mom)
+	child1 = alfa * dad +(1 - alfa) * mom
+	child2 = alfa * mom +(1 - alfa) * dad
+	return list(child1), list(child2)
+	#  .randint(0, len(dad) - 1)
+
+def mutation(indiv, lr=0.01):
+	index = random.randint(0, len(indiv) - 1)
+
+	if random.uniform(0, 1) > 0.5:
+		indiv[index] += lr
+	else:
+		indiv[index] -= lr
+
+	return indiv
+
+def initPopulation(n):
+	# list(np.random.rand(11*8 + 9*6 + 7*1) * 20 - 10)
+	listRes = []
+	i = 0
+	for _ in range(n):	
+		state = list(np.random.rand(149) * 101 - 200)
+		# state[8] = 91.5
+		listRes.append(state)
+	return listRes
+	# return [list(np.random.rand(149) * 200 - 100) for _ in range(n)]
+	# [list(np.random.rand(-100, 101, 149)) for _ in range(n)]
+
+def convergent(population):
+	# print('population => ', population)
+	for i in range(len(population) - 1):
+		if population[i] != population[i + 1]:
+			return False
+	return True
+
+def evaluate_population(player_class, population, input, hidden, output):
+	list = []
+	count = 0
+	for state in population:
+		evalRes = getBestPlayerResult(player_class, state, input, hidden, output)
+		count +=1
+		print('evaluate population: \t', count, '\t value', evalRes)
+		list.append((evalRes, state))
+	return list
+	# return [(getBestPlayerResult(player_class, state, input, hidden, output), state) for state in population]
+
+def elitism(val_pop, pct):
+	return [s for v, s in sorted(val_pop, key=lambda x: x[0], reverse=True)[:max(pct*len(val_pop)//100, 1)]]
+
+def crossover_step(population, crossover_ratio):
+	# print('cros_step => ', population, crossover_ratio)
+	new_pop = []
+	for _ in range(len(population)//2):
+		parent1, parent2 = random.sample(population, 2)
+		if random.uniform(0, 1) <= crossover_ratio:
+			offspring1, offspring2 = crossover2(parent1, parent2)
+			# offspring1, offspring2 = crossover(parent1, parent2)
+		else:
+			offspring1, offspring2 = parent1, parent2
+		new_pop += [offspring1, offspring2]
+	return new_pop
+
+def mutation_step(population, mutation_ratio, lr=0.01):
+	return [mutation(e, lr) if random.uniform(0, 1) < mutation_ratio else e for e in population]
+
+def genetic(player_class, base_state, pop_size, max_iter, cross_ratio, mut_ratio, max_time, elite_pct, learning_rate=0.01, input=10, hidden=[], output=1):
+	print('=========== GA ===============\n\n')
+	start = time.time()
+	pop = [base_state] + initPopulation(pop_size - 1)
+	opt_state = base_state
+	opt_value = getBestPlayerResult(player_class, opt_state, input, hidden, output)
+	last_change_iter = 0
+	last_change_time = time.time()
+	i = 0
+	try:
+		while not convergent(pop) and i < max_iter and time.time() - start <= max_time:
+			val_pop = evaluate_population(player_class, pop, input, hidden, output)
+			new_pop = elitism(val_pop, elite_pct)
+			best = new_pop[0].copy()
+			val_best = getBestPlayerResult(player_class, best, input, hidden, output)
+
+			if val_best > opt_value:
+				print('New best state found')
+				print(best)
+				last_change_iter = i
+				last_change_time = time.time()
+				opt_state = best.copy()
+				opt_value = val_best
+			
+			# if last_change_iter - i > max_iter//5:
+			# 	print('More than 20%% of maximum permited iterations without changing best state, breaking earlier.')
+			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
+			# if last_change_iter - i > 1000:
+			# 	print('More than 1000 iterations without changing best state, breaking earlier.')
+			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
+			# if time.time() - last_change_time > max_time//5:
+			# 	print('More than 20%% of maximum permited time without changing best state, breaking earlier.')
+			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
+			# if time.time() - last_change_time > 8*60*60:
+			# 	print('More than 8 hours without changing best state, breaking earlier.')
+			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
 
 
-#     # def keySelector(game_speed, obstacles, player):
-#     #     this.getKey(distance, obHeight, game_speed, obWidth, player.getXY()[1])
+			selected = selection(val_pop, pop_size - len(new_pop))
+			crossed = crossover_step(selected, cross_ratio)
+			mutated = mutation_step(crossed, mut_ratio, learning_rate)
+			pop = new_pop + mutated
 
-#     def neuronsConnections(self, value, input, output, position):
-#         # print('val=> ', value, '\tinput=> ', input, '\toutput', output, '\tposition', position)
-#         neurons = []
-#         i = 0
-#         for _ in range(output):
-#             i += 1
-#             count = 0
-#             for j in range(input):
-#                 count += value[j] * self.weight[position]
-#                 position += 1
-#             # neurons.append(sigmoid(count)) # tanh
-#             neurons.append(tanh(count)) # tanh
-#         return [neurons, position]
-   
-#     # def updateWeight(self, weight):
-#     #     self.weight = weight
+			print('% 15s % 5d done, time elapsed: % 8.1f, score: % 10.3f' %('Iteration', i, time.time() - start, opt_value))
+			i += 1
+	except KeyboardInterrupt:
+		pass
+
+	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
 

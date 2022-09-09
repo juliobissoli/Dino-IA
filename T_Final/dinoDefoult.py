@@ -251,7 +251,7 @@ def playerKeySelector():
 
 def playGame(aiPlayer, seed):
 	global game_speed, x_pos_bg, y_pos_bg, points, obstacles
-	random.seed (1481)
+	# random.seed (1481)
 
 	run = True
 	clock = pygame.time.Clock()
@@ -370,6 +370,11 @@ def playGame(aiPlayer, seed):
 		for obstacle in obstacles:
 			if player.dino_rect.colliderect(obstacle.rect):
 				death_count += 1
+				distance = obstacle.rect.x + obstacle.rect.w - player.dino_rect.x
+				feet_pos = player.dino_rect.y + player.dino_rect.h
+				y0 = obstacle.rect.y - feet_pos
+				lower_limit = ((-16.5+(16.5*16.5+4*4.4*y0)**0.5)/4.4)
+				print (lower_limit, distance)
 				return points
 
 				while 1:
@@ -446,8 +451,9 @@ import numpy as np
 def manyPlaysResults(aiPlayer, rounds):
 	results = []
 	for round in range(rounds):
-		print('round: ', round)
-		results += [playGame(aiPlayer, round)]
+		points = playGame(aiPlayer, round)
+		print('round: ', round, '\t points: ', points)
+		results += [points]
 	npResults = np.asarray(results)
 	return (results, npResults.mean() - npResults.std())
 
