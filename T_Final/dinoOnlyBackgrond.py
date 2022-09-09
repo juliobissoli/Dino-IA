@@ -4,7 +4,6 @@ import random
 import time
 from sys import exit
 
-# Valid values: HUMAN_MODE or AI_MODE
 GAME_MODE = "AI_MODE"
 
 # Global Constants
@@ -194,7 +193,6 @@ class KeySimplestClassifier(KeyClassifier):
 		self.state = state
 
 	def keySelector(self, distance, obHeight, speed, obType):
-		print('Bateu aqui ===> ')
 		self.state = sorted(self.state, key=first)
 		for s, d in self.state:
 			if speed < s:
@@ -243,6 +241,7 @@ def playGame(aiPlayer, seed):
 		if points % 100 == 0:
 			game_speed += 1
 
+
 	while run:
 
 		distance = 1500
@@ -257,10 +256,9 @@ def playGame(aiPlayer, seed):
 		if GAME_MODE == "HUMAN_MODE":
 			userInput = playerKeySelector()
 		else:
-			# Please note that the inputs required by the function are different
-			# from the default.
-			userInput = aiPlayer.keySelector(game_speed, obstacles, player)
-			# userInput = aiPlayer.keySelector(distance, obHeight, game_speed, obType)
+			# userInput = aiPlayer.keySelector(game_speed, player, obType)
+			# userInput = aiPlayer.keySelector(game_speed, obstacles, player)
+			userInput = aiPlayer.keySelector(distance, obHeight, game_speed, obType)
 			
 
 		if len(obstacles) == 0 or obstacles[-1].getXY()[0] < spawn_dist:
@@ -344,7 +342,7 @@ import glob
 
 def manyPlaysResults(aiPlayer, rounds):
 	results = []
-	with Pool (os.cpu_count ()) as p:
+	with Pool (os.cpu_count ()-2) as p:
 		results = p.starmap (playGame, zip ([aiPlayer]*rounds, range (rounds)))
 	npResults = np.asarray(results)
 	return_value = npResults.mean()
