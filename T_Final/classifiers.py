@@ -48,58 +48,62 @@ class NeuralClassifier(KeyClassifier):
 						obs.append(obstacles[i+1])
 				break
 		
-		dino_feet_pos = player.dino_rect.bottom - player.jump_vel
-		dino_current_vertical_speed = player.jump_vel - player.jump_grav
-		ground_top = player.Y_POS_DUCK+(player.dino_rect.bottom - player.dino_rect.top)
-		distance_dino_bottom_ground_top = -(ground_top - dino_feet_pos)
-		is_dino_jumping = int(player.dino_jump)
-
-		distance_to_cross_obs = 0
-		distance_to_reach_obs = 0
-		distance_obs_top_dino_bottom = 0
-		distance_to_reach_next_obs = 0
-		next_obs_height = 0
+		dinoFeetPos = player.dino_rect.bottom - player.jump_vel
+		groundTop = player.Y_POS_DUCK+(player.dino_rect.bottom - player.dino_rect.top)
+		distanceDinoBottomGroundTop = -(groundTop - dinoFeetPos)
+		distance2ReachNextObstacle = 0
+		nextObstacleHeight = 0
 		isBirdHigh = 0
-		is_obstacle_large_cactus = 0
+		isObstacleLargeCactus = 0
+		isObstacleSmallCactus = 0
+		dinoCurrentVerticalSpeed = player.jump_vel - player.jump_grav
+		distanceDinoDeadObstacleBootom = 0
+		distance2ReachObstacle = 0
+		distance2CrossObstacle = 0
+		time2ReachObstacle = distance2ReachObstacle/speed
+		time2CrossObstacle = distance2CrossObstacle/speed
+		time2ReachObstacleTopHoldingDown = self.parabolaAbyss(distanceDinoDeadObstacleBootom, dinoCurrentVerticalSpeed, -4.4)[1]
+		time2ReachGroundHoldingDown = self.parabolaAbyss(distanceDinoBottomGroundTop, dinoCurrentVerticalSpeed, -4.4)[1]
+		time2AboveNextObstacleFromHere = 0
+		time2AboveNextObstacleFromGround = 0
+		time2ReachNextObstacle = 0
 
 		if len(obs) > 0:
 			isBirdHigh = int(obs[0].__class__.__name__ == 'Bird' and obs[0].getHeight() > 50)
-			is_obstacle_large_cactus = int(obs[0].__class__.__name__ == 'LargeCactus')
-
-			distance_to_cross_obs = obs[0].rect.right - player.dino_rect.left - speed
-			distance_to_reach_obs = obs[0].rect.left - player.dino_rect.right - speed
-			# Distances in the Y axis must be inverted, since
-			# the Y axis grows down
-			distance_obs_top_dino_bottom = -(obs[0].rect.top - dino_feet_pos)
+			isObstacleLargeCactus = int(obs[0].__class__.__name__ == 'LargeCactus')
+			isObstacleSmallCactus = int(obs[0].__class__.__name__ == 'SmallCactus')
+			distance2CrossObstacle = obs[0].rect.right - player.dino_rect.left - speed
+			distanceDinoDeadObstacleBootom = -(obs[0].rect.top - dinoFeetPos)
+			distance2ReachObstacle = obs[0].rect.left - player.dino_rect.right - speed
 
 		if len(obs) > 1:
-			distance_to_reach_next_obs = obs[1].rect.left - player.dino_rect.right - speed
-			next_obs_height = -(obs[1].rect.top - ground_top)
-		time_to_reach_obs = distance_to_reach_obs/speed
-		time_to_cross_obs = distance_to_cross_obs/speed
+			distance2ReachNextObstacle = obs[1].rect.left - player.dino_rect.right - speed
+			nextObstacleHeight = -(obs[1].rect.top - groundTop)
+
+
 		time_to_be_above_obs = -100
-		if distance_obs_top_dino_bottom > 0: 
-			time_to_be_above_obs = self.parabola_roots(distance_obs_top_dino_bottom, 17, -1.1)[0]
-		time_to_reach_obs_top_holding_down = self.parabola_roots(distance_obs_top_dino_bottom, dino_current_vertical_speed, -4.4)[1]
-		time_to_reach_ground_holding_down = self.parabola_roots(distance_dino_bottom_ground_top, dino_current_vertical_speed, -4.4)[1]
-		time_to_reach_next_obs = 0
-		time_to_be_above_next_obs_from_ground = 0
-		time_to_be_above_next_obs_from_here = 0
+		if distanceDinoDeadObstacleBootom > 0: 
+			time_to_be_above_obs = self.parabolaAbyss(distanceDinoDeadObstacleBootom, 17, -1.1)[0]
+		
 
-		if distance_to_reach_next_obs > 0:
-			time_to_reach_next_obs = distance_to_reach_next_obs/speed
-			time_to_be_above_next_obs_from_ground = self.parabola_roots(next_obs_height, 17, -1.1)[0]
-			time_to_be_above_next_obs_from_here = time_to_reach_ground_holding_down + time_to_be_above_next_obs_from_ground
 
-		KEY = self.classify(time_to_cross_obs, isBirdHigh, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs)
+		if distance2ReachNextObstacle > 0:
+			time2ReachNextObstacle = distance2ReachNextObstacle/speed
+			time2AboveNextObstacleFromGround = self.parabolaAbyss(nextObstacleHeight, 17, -1.1)[0]
+			time2AboveNextObstacleFromHere = time2ReachGroundHoldingDown + time2AboveNextObstacleFromGround
+		
+		
+
+		# def classify(self, speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs):
+		KEY = self.classify(speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, int(player.dino_jump), dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs)
 
 		return KEY
 
-	def classify(self, time_to_cross_obs, isBirdHigh, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs):
+	def classify(self, speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs):
 
-		input_layer = np.array([time_to_cross_obs, isBirdHigh, time_to_reach_next_obs, time_to_be_above_next_obs_from_here, is_obstacle_large_cactus, time_to_reach_obs_top_holding_down, is_dino_jumping, dino_current_vertical_speed, time_to_reach_obs, time_to_be_above_obs]).reshape(1, 10)
-
-		hidden_layer = input_layer
+		# input_layer = np.array([speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs]).reshape(1, 12)
+		hidden_layer = np.array([speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs]).reshape(1, 12)
+		# hidden_layer = input_layer
 		for hw,hb in zip(self.hidden_weights, self.hidden_bias):
 			hidden_layer =  np.matmul(hidden_layer, hw)
 			hidden_layer += hb 
@@ -122,7 +126,7 @@ class NeuralClassifier(KeyClassifier):
 		self.__init__(state)
 
 
-	def parabola_roots(self, dy, v, a):
+	def parabolaAbyss(self, dy, v, a):
 		delta = max((v-a/2)*(v-a/2)+2*dy*a, 0)**0.5
 		roots = [(-(v-a/2)-delta)/a,(-(v-a/2)+delta)/a]
 		return(min(roots), max(roots), )
@@ -183,7 +187,7 @@ def initPopulation(n):
 	listRes = []
 	i = 0
 	for _ in range(n):	
-		state = list(np.random.rand(149) * 101 - 200)
+		state = list(np.random.rand(300) * 101 - 200)
 		# state[8] = 91.5
 		listRes.append(state)
 	return listRes

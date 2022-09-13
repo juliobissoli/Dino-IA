@@ -48,13 +48,13 @@ def main ():
 	# best_state, value, iterations, convergence, timed = genetic (FrancoNeuralClassifier, best_state, 100, 999999999, 0.8, 0.6, 60*60*8.5, 10, 0.1)
 	# init_state =  [random.randrange(1, 10, 1) for i in range(((11 * 8)  + (10 * 6) + 1))]
 	
-	init_state = list(np.random.rand(11*8 + 9*6 + 7*1) * 11 - 2)
+	init_state = list(np.random.rand(14*8 + 12*6 + 7*1) * 101 - 200)
 	
 	print(init_state)
 	print(len(best_state))
 	print('Vai treinar')
 	# aiPlayerTreino = FrancoNeuralClassifier (best_state, 10, [8, 6], 1)
-	best_state, value, iterations, convergence, timed = genetic(NeuralClassifier, init_state, 30, 999999999, 0.8, 0.6, 60*60*8, 10, 0.1, 10, [8, 6], 1)
+	best_state, value, iterations, convergence, timed = genetic(NeuralClassifier, init_state, 30, 999999999, 0.8, 0.6, 60*60*8, 10, 0.1, 12, [8, 4], 1)
 
 
 	print('\n\n++++++++++++++++++++++++++++')
@@ -62,7 +62,7 @@ def main ():
 	print('++++++++++++++++++++++++++++\n\n')
 	print('bast_state => ',  best_state)
 
-	aiPlayer = NeuralClassifier(best_state, 10, [8, 6], 1)
+	aiPlayer = NeuralClassifier(best_state, 12, [8, 4], 1)
 	res, value = manyPlaysResults(aiPlayer, 30)
 	npRes = np.asarray (res)
 	print (npRes)
