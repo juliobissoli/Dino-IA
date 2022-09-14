@@ -1,14 +1,9 @@
-# from dinoAIrenderless import KeyClassifier, SmallCactus, LargeCactus, Bird
 import numpy as np, pandas as pd
 
-from dinoDefoult import KeyClassifier, SmallCactus, LargeCactus, Bird
+from dinoDefoult import KeyClassifier
 
-from math import tanh, exp
-
-from itertools import count
 import time, numpy as np, random
-from dinoDefoult import manyPlaysResults
-# from dinoOnlyBackgrond import manyPlaysResults
+from dinoOnlyBackgrond import  manyPlaysResults
 
 
 class NeuralClassifier(KeyClassifier):
@@ -94,16 +89,13 @@ class NeuralClassifier(KeyClassifier):
 		
 		
 
-		# def classify(self, speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs):
 		KEY = self.classify(speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, int(player.dino_jump), dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs)
 
 		return KEY
 
 	def classify(self, speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs):
 
-		# input_layer = np.array([speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs]).reshape(1, 12)
 		hidden_layer = np.array([speed, time2CrossObstacle, isBirdHigh, time2ReachNextObstacle, time2AboveNextObstacleFromHere, isObstacleLargeCactus, isObstacleSmallCactus, time2ReachObstacleTopHoldingDown, isDinoJumping, dinoCurrentVerticalSpeed, time2ReachObstacle, time_to_be_above_obs]).reshape(1, 12)
-		# hidden_layer = input_layer
 		for hw,hb in zip(self.hidden_weights, self.hidden_bias):
 			hidden_layer =  np.matmul(hidden_layer, hw)
 			hidden_layer += hb 
@@ -115,10 +107,8 @@ class NeuralClassifier(KeyClassifier):
 		output = output_layer[0][0]
 
 		if output < 0:
-			# print('K_DOWN')
 			return 'K_DOWN'
 		else:
-			# print('K_UP')
 			return 'K_UP'
 
 
@@ -139,14 +129,7 @@ class NeuralClassifier(KeyClassifier):
 def getBestPlayerResult(player_class, state, input, hidden, output):
 	return manyPlaysResults(player_class(state, input, hidden, output), 10)[1]
 
-# def generate_states(initial_state, lr=0.01):
-# 	return [[e+lr*int(i==j) for i, e in enumerate(initial_state)] for j in range(len(initial_state))] + [[e-lr*int(i==j) for i, e in enumerate(initial_state)] for j in range(len(initial_state))]
-
-# def states_total_value(states):
-# 	return sum([max(e[0], 0) for e in states])
-
 def roulette_construction(states):
-	# total_value = states_total_value(states)
 	total_value = sum([max(e[0], 0) for e in states])
 	roulette = [(max(e[0],0)/total_value, e[1]) for e in states]
 	for i in range(1, len(roulette)):
@@ -159,10 +142,6 @@ def roulette_run(rounds, roulette):
 def selection(value_population, n):
 	return roulette_run(n, roulette_construction(value_population))
 
-# def crossover(dad, mom):
-# 	r = random.randint(0, len(dad) - 1)
-# 	return dad[:r] + mom[r:], mom[:r] + dad[r:]
-
 def crossover2(dad, mom): 
 	alfa = np.random.rand()
 	dad = np.array(dad)
@@ -170,7 +149,6 @@ def crossover2(dad, mom):
 	child1 = alfa * dad +(1 - alfa) * mom
 	child2 = alfa * mom +(1 - alfa) * dad
 	return list(child1), list(child2)
-	#  .randint(0, len(dad) - 1)
 
 def mutation(indiv, lr=0.01):
 	index = random.randint(0, len(indiv) - 1)
@@ -183,19 +161,15 @@ def mutation(indiv, lr=0.01):
 	return indiv
 
 def initPopulation(n):
-	# list(np.random.rand(11*8 + 9*6 + 7*1) * 20 - 10)
 	listRes = []
 	i = 0
 	for _ in range(n):	
-		state = list(np.random.rand(300) * 101 - 200)
-		# state[8] = 91.5
+		state = list(np.random.rand(191) * 101 - 200)
 		listRes.append(state)
 	return listRes
-	# return [list(np.random.rand(149) * 200 - 100) for _ in range(n)]
-	# [list(np.random.rand(-100, 101, 149)) for _ in range(n)]
+
 
 def convergent(population):
-	# print('population => ', population)
 	for i in range(len(population) - 1):
 		if population[i] != population[i + 1]:
 			return False
@@ -210,13 +184,11 @@ def evaluate_population(player_class, population, input, hidden, output):
 		print('evaluate population: \t', count, '\t value', evalRes)
 		list.append((evalRes, state))
 	return list
-	# return [(getBestPlayerResult(player_class, state, input, hidden, output), state) for state in population]
 
 def elitism(val_pop, pct):
 	return [s for v, s in sorted(val_pop, key=lambda x: x[0], reverse=True)[:max(pct*len(val_pop)//100, 1)]]
 
 def crossover_step(population, crossover_ratio):
-	# print('cros_step => ', population, crossover_ratio)
 	new_pop = []
 	for _ in range(len(population)//2):
 		parent1, parent2 = random.sample(population, 2)
@@ -254,19 +226,6 @@ def genetic(player_class, base_state, pop_size, max_iter, cross_ratio, mut_ratio
 				last_change_time = time.time()
 				opt_state = best.copy()
 				opt_value = val_best
-			
-			# if last_change_iter - i > max_iter//5:
-			# 	print('More than 20%% of maximum permited iterations without changing best state, breaking earlier.')
-			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
-			# if last_change_iter - i > 1000:
-			# 	print('More than 1000 iterations without changing best state, breaking earlier.')
-			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
-			# if time.time() - last_change_time > max_time//5:
-			# 	print('More than 20%% of maximum permited time without changing best state, breaking earlier.')
-			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
-			# if time.time() - last_change_time > 8*60*60:
-			# 	print('More than 8 hours without changing best state, breaking earlier.')
-			# 	return opt_state, opt_value, i, convergent(pop), time.time() - start <= max_time
 
 
 			selected = selection(val_pop, pop_size - len(new_pop))
